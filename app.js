@@ -48,16 +48,20 @@ app.get("/movies/", async (request, response) => {
 
 // API-2
 app.post("/movies/", async (request, response) => {
-  const movieDetails = request.body;
-  const { directorId, movieName, leadActor } = movieDetails;
-  const addMovieQuery = `
-      INSERT INTO movie
-      (director_id, movie_name ,lead_actor)
-      VALUES 
-      (${directorId},'${movieName}','${leadActor}')
-    `;
-  await db.run(addMovieQuery);
-  response.send("Movie Successfully Added");
+  try {
+    const movieDetails = request.body;
+    const { directorId, movieName, leadActor } = movieDetails;
+    const addMovieQuery = `
+        INSERT INTO movie
+        (director_id, movie_name ,lead_actor)
+        VALUES 
+        ('${directorId}','${movieName}','${leadActor}')
+        `;
+    await db.run(addMovieQuery);
+    response.send("Movie Successfully Added");
+  } catch (error) {
+    console.log(`DB Error: ${error.message}`);
+  }
 });
 
 const convertSnakeCaseTOCamelCase = (dbObject) => {
@@ -90,9 +94,9 @@ app.put("/movies/:movieId/", async (request, response) => {
         UPDATE 
             movie
         SET 
-            director_id=${directorId},
+            director_id='${directorId}',
             movie_name='${movieName}',
-            lead_actor=${leadActor}
+            lead_actor='${leadActor}'
         WHERE 
             movie_id=${movieId};
     `;
@@ -137,8 +141,12 @@ app.get("/directors/:directorId/movies/", async (request, response) => {
   const { directorId } = request.params;
   const getDirectorMoviesQuery = `
     SELECT movie_name FROM movie WHERE director_id=${directorId};`;
-  const directorMovies = await db.get(getDirectorMoviesQuery);
-  response.send(convertMovieNameSnakeCaseTOCamelCase(directorMovies));
+  const directorMovies = await db.all(getDirectorMoviesQuery);
+  response.send(
+    directorMovies.map((eachDirector) =>
+      convertMovieNameSnakeCaseTOCamelCase(eachDirector)
+    )
+  );
 });
 
 module.exports = app;
